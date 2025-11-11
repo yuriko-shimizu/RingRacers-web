@@ -370,7 +370,11 @@ consvar_t cv_fpscap = Player("fpscap", "Match refresh rate").values({
 });
 
 void SCR_ChangeFullscreen(void);
+#ifndef __EMSCRIPTEN__
 consvar_t cv_fullscreen = Player("fullscreen", "Yes").yes_no().onchange(SCR_ChangeFullscreen);
+#else // dont fullscreen by default on emscripten. we're in a browser so its quite disruptive
+consvar_t cv_fullscreen = Player("fullscreen", "No").yes_no().onchange(SCR_ChangeFullscreen);
+#endif
 
 // Sound system toggles, saved into the config
 void GameDigiMusic_OnChange(void);
@@ -432,7 +436,11 @@ consvar_t cv_pauseifunfocused = Player("pauseifunfocused", "Yes").yes_no();
 
 extern CV_PossibleValue_t cv_renderer_t[];
 consvar_t cv_renderer = Player("renderer", "Software").flags(CV_NOLUA).values(cv_renderer_t).onchange(SCR_ChangeRenderer);
+#ifndef __EMSCRIPTEN__
 consvar_t cv_parallelsoftware = Player("parallelsoftware", "On").on_off();
+#else // no threading support, disable
+consvar_t cv_parallelsoftware = Player("parallelsoftware", "Off").on_off();
+#endif
 
 consvar_t cv_renderview = Player("renderview", "On").values({{0, "Off"}, {1, "On"}, {2, "Force"}}).dont_save();
 consvar_t cv_rollingdemos = Player("rollingdemos", "On").on_off();
@@ -595,6 +603,9 @@ consvar_t cv_sleep = Server("cpusleep", "1").min_max(0, 1000/TICRATE);
 #ifdef USE_STUN
 	/* https://gist.github.com/zziuni/3741933 */
 	/* I can only trust google to keep their shit up :y */
+	consvar_t cv_stunserver = Server("stunserver", "stun.l.google.com:19302");
+#endif
+#ifndef USE_STUN // define this anyway. game wont compile without it.
 	consvar_t cv_stunserver = Server("stunserver", "stun.l.google.com:19302");
 #endif
 

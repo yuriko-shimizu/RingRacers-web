@@ -329,7 +329,7 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
 endif()
 
 # Enable SSE2 for IA-32.
-if(SRB2_SYSTEM_BITS EQUAL 32)
+if(SRB2_SYSTEM_BITS EQUAL 32 AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 	if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang|AppleClang)")
 		check_cxx_compiler_flag("-msse2" has_sse2)
 		if(has_sse2)
@@ -349,9 +349,12 @@ if(SRB2_SYSTEM_BITS EQUAL 32)
 	endif()
 endif()
 
-target_link_libraries(SRB2SDL2 PRIVATE ZLIB::ZLIB)
-target_link_libraries(SRB2SDL2 PRIVATE PNG::PNG)
-target_link_libraries(SRB2SDL2 PRIVATE CURL::libcurl)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+	target_link_libraries(SRB2SDL2 PRIVATE ZLIB::ZLIB)
+	target_link_libraries(SRB2SDL2 PRIVATE PNG::PNG)
+	target_link_libraries(SRB2SDL2 PRIVATE CURL::libcurl)
+endif()
+target_link_libraries(SRB2SDL2 PRIVATE cpptrace::cpptrace)
 target_link_libraries(SRB2SDL2 PRIVATE Opus::opus)
 if(WIN32 AND NOT MINGW)
 	target_link_libraries(SRB2SDL2 PRIVATE cpptrace::cpptrace)
@@ -362,10 +365,19 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "FreeBSD")
 	target_link_libraries(SRB2SDL2 PRIVATE -lexecinfo)
 	target_link_libraries(SRB2SDL2 PRIVATE -lpthread)
 endif()
-target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_ZLIB -DHAVE_PNG -DHAVE_CURL -D_LARGEFILE64_SOURCE)
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+	# no curl!
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_ZLIB -DHAVE_PNG -D_LARGEFILE64_SOURCE)
+else()
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_ZLIB -DHAVE_PNG -DHAVE_CURL -D_LARGEFILE64_SOURCE)
+endif()
 target_sources(SRB2SDL2 PRIVATE apng.c)
 
-target_compile_definitions(SRB2SDL2 PRIVATE -DUSE_STUN)
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+else()
+	target_compile_definitions(SRB2SDL2 PRIVATE -DUSE_STUN)
+endif()
+
 target_sources(SRB2SDL2 PRIVATE stun.cpp)
 if(SRB2_CONFIG_ENABLE_DISCORDRPC)
 	target_link_libraries(SRB2SDL2 PRIVATE DiscordRPC::DiscordRPC)
@@ -396,49 +408,49 @@ endif()
 
 target_link_libraries(SRB2SDL2 PRIVATE nlohmann_json::nlohmann_json)
 
-set(SRB2_HAVE_THREADS ON)
-target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_THREADS)
 
-if(${SRB2_CONFIG_HAVE_ZLIB})
-	if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
-		set(ZLIB_FOUND ON)
-		set(ZLIB_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/zlib)
-		if(${SRB2_SYSTEM_BITS} EQUAL 64)
-			set(ZLIB_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/zlib/win32 -lz64")
-		else() # 32-bit
-			set(ZLIB_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/zlib/win32 -lz32")
-		endif()
-	else()
-		find_package(ZLIB)
-	endif()
-	if(${ZLIB_FOUND})
-		set(SRB2_HAVE_ZLIB ON)
-		target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_ZLIB)
-	else()
-		message(WARNING "You have specified that ZLIB is available but it was not found. Dr Robotnik's Ring Racers may not compile correctly.")
-	endif()
-endif()
-
-if(${SRB2_CONFIG_HAVE_PNG} AND ${SRB2_CONFIG_HAVE_ZLIB})
-	if (${ZLIB_FOUND})
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+	if(${SRB2_CONFIG_HAVE_ZLIB})
 		if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
-			set(PNG_FOUND ON)
-			set(PNG_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/libpng-src)
+			set(ZLIB_FOUND ON)
+			set(ZLIB_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/zlib)
 			if(${SRB2_SYSTEM_BITS} EQUAL 64)
-				set(PNG_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/libpng-src/projects -lpng64")
+				set(ZLIB_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/zlib/win32 -lz64")
 			else() # 32-bit
-				set(PNG_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/libpng-src/projects -lpng32")
+				set(ZLIB_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/zlib/win32 -lz32")
 			endif()
 		else()
-			find_package(PNG)
+			find_package(ZLIB)
 		endif()
-		if(${PNG_FOUND})
-			set(SRB2_HAVE_PNG ON)
-			target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_PNG)
-			target_compile_definitions(SRB2SDL2 PRIVATE -D_LARGEFILE64_SOURCE)
-			target_sources(SRB2SDL2 PRIVATE apng.c)
+		if(${ZLIB_FOUND})
+			set(SRB2_HAVE_ZLIB ON)
+			target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_ZLIB)
 		else()
-			message(WARNING "You have specified that PNG is available but it was not found. Dr Robotnik's Ring Racers may not compile correctly.")
+			message(WARNING "You have specified that ZLIB is available but it was not found. Dr Robotnik's Ring Racers may not compile correctly.")
+		endif()
+	endif()
+
+	if(${SRB2_CONFIG_HAVE_PNG} AND ${SRB2_CONFIG_HAVE_ZLIB})
+		if (${ZLIB_FOUND})
+			if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
+				set(PNG_FOUND ON)
+				set(PNG_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/libpng-src)
+				if(${SRB2_SYSTEM_BITS} EQUAL 64)
+					set(PNG_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/libpng-src/projects -lpng64")
+				else() # 32-bit
+					set(PNG_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/libpng-src/projects -lpng32")
+				endif()
+			else()
+				find_package(PNG)
+			endif()
+			if(${PNG_FOUND})
+				set(SRB2_HAVE_PNG ON)
+				target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_PNG)
+				target_compile_definitions(SRB2SDL2 PRIVATE -D_LARGEFILE64_SOURCE)
+				target_sources(SRB2SDL2 PRIVATE apng.c)
+			else()
+				message(WARNING "You have specified that PNG is available but it was not found. Dr Robotnik's Ring Racers may not compile correctly.")
+			endif()
 		endif()
 	endif()
 endif()
@@ -768,6 +780,54 @@ if((CMAKE_COMPILER_IS_GNUCC) AND NOT ("${CMAKE_SYSTEM_NAME}" MATCHES Darwin))
 			COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE:SRB2SDL2>.debug $<TARGET_FILE:SRB2SDL2>
 		)
 	endif()
+endif()
+
+# Emscripten-specific configuration
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+	target_compile_definitions(SRB2SDL2 PRIVATE 
+		-DNONET  # cant really do networking in web builds
+		-D__EMSCRIPTEN__  # we have emscripten
+	)
+	
+	# Configure Emscripten build settings
+	target_link_options(SRB2SDL2 PRIVATE 
+		"-sUSE_SDL=2"
+		"-sUSE_ZLIB=1"
+		"-sUSE_LIBPNG=1"
+		"-sUSE_OGG=1"
+		"-sUSE_VORBIS=1"
+		"-sMIN_WEBGL_VERSION=1"
+		"-sMAX_WEBGL_VERSION=1"
+		"-sALLOW_MEMORY_GROWTH=1"
+		"-sINITIAL_MEMORY=256MB"
+		"-sTOTAL_STACK=16MB"
+		"-sWASM=1"
+		"-sLEGACY_GL_EMULATION=0"
+		"-sLLD_REPORT_UNDEFINED"
+		"-sERROR_ON_UNDEFINED_SYMBOLS=0"  # shhh dw about it
+		"-sEXPORTED_RUNTIME_METHODS=['callMain','HEAPU8']" # lets us call main
+		"-sEXPORTED_FUNCTIONS=['_main']"
+		"-sASSERTIONS=1"  # errors! very helpful
+		"-sASYNCIFY"  # async! useful for sleep
+		"-lidbfs.js"  # indexeddb! need this for save files + caching game data
+	)
+
+	# it wants these as compile options too! errors otherwise even tho im told these are link flags...
+	# i do NOT know how cmake works. if youre reading this please fix my mess and pr it
+	target_compile_options(SRB2SDL2 PRIVATE -sUSE_ZLIB=1 -sUSE_LIBPNG=1)
+	
+	# disable threading. i tried it with threading on and performance was way worse for some reason
+	set(SRB2_HAVE_THREADS OFF)
+	
+	# we totes have all these trust me
+	set(SRB2_HAVE_ZLIB ON)
+	set(SRB2_HAVE_PNG ON)
+	set(SRB2_HAVE_SDL ON)
+	
+	# create a js file
+	set_target_properties(SRB2SDL2 PROPERTIES 
+		SUFFIX ".js"
+	)
 endif()
 
 # copy DLLs to bin/ directory if building internal shared on windows

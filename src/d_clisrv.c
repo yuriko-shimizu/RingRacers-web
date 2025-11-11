@@ -16,7 +16,23 @@
 #include <unistd.h> //for unlink
 #endif
 
+#ifndef __EMSCRIPTEN__
 #include <opus.h>
+#else
+// just define all this stuff so it compiles. all the stuff that uses this stuff is ifdefed out anyway
+typedef struct OpusEncoder OpusEncoder;
+typedef struct OpusDecoder OpusDecoder;
+#define OPUS_OK 0
+#define OPUS_APPLICATION_VOIP 0
+#define opus_encoder_create(r,c,a,e) NULL
+#define opus_decoder_create(r,c,e) NULL
+#define opus_encode_float(e,i,f,o,s) -1
+#define opus_decode_float(d,i,s,o,f,l) -1
+#define opus_encoder_destroy(e)
+#define opus_decoder_destroy(d)
+#define opus_pcm_soft_clip(b,f,c,m)
+#endif
+
 #include <renamenoise.h>
 
 #include "i_time.h"
@@ -53,6 +69,9 @@
 #include "m_perfstats.h"
 #include "monocypher/monocypher.h"
 #include "stun.h"
+#ifdef __EMSCRIPTEN__
+	#include "emscripten_csprng.h"
+#endif
 
 // SRB2Kart
 #include "k_credits.h"
@@ -881,7 +900,13 @@ static inline void CL_DrawConnectionStatus(void)
 			}
 
 			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-58-30, 0,
-				va(M_GetText("%s downloading"), ((cl_mode == CL_DOWNLOADHTTPFILES) ? "\x82""HTTP" : "\x85""Direct")));
+				va(M_GetText("%s downloading"), 
+#ifdef HAVE_CURL
+					((cl_mode == CL_DOWNLOADHTTPFILES) ? "\x82""HTTP" : "\x85""Direct")
+#else
+					"\x85""Direct"
+#endif
+				));
 			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-58-22, V_YELLOWMAP,
 				va(M_GetText("\"%s\""), tempname));
 			V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-58, V_20TRANS|V_MONOSPACE,
@@ -2584,6 +2609,9 @@ static void ResetNode(INT32 node);
 
 static void RecreatePlayerOpusDecoder(INT32 playernum)
 {
+#ifdef __EMSCRIPTEN__
+	return;
+#endif
 	// Destroy and recreate the opus decoder for this playernum
 	OpusDecoder *opusdecoder = g_player_opus_decoders[playernum];
 	if (opusdecoder)
@@ -2673,10 +2701,12 @@ void CL_ClearPlayer(INT32 playernum)
 	// Handle post-cleanup.
 	RemoveAdminPlayer(playernum); // don't stay admin after you're gone
 
+#ifndef __EMSCRIPTEN__
 	// Clear voice chat data
 	S_ResetVoiceQueue(playernum);
 
 	RecreatePlayerOpusDecoder(playernum);
+#endif
 }
 
 //
@@ -3856,8 +3886,10 @@ static void Got_AddPlayer(const UINT8 **p, INT32 playernum)
 			}
 			DEBFILE("spawning me\n");
 
+			#ifndef __EMSCRIPTEN__ // no voice support here
 			InitializeLocalVoiceDenoiser();
 			InitializeLocalVoiceEncoder();
+			#endif
 		}
 
 		P_ForceLocalAngle(newplayer, newplayer->angleturn);
@@ -7404,7 +7436,9 @@ void NetKeepAlive(void)
 
 	// Update voice whenever possible.
 	{
+		#ifndef __EMSCRIPTEN__ // unless its emscripten.
 		NetVoiceUpdate();
+		#endif
 	}
 }
 

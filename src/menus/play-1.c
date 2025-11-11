@@ -41,8 +41,13 @@ void M_SetupPlayMenu(INT32 choice)
 	}
 	else
 	{
+		#ifndef __EMSCRIPTEN__
 		PLAY_MainMenu[1].status = IT_STRING | IT_CALL;
 		PLAY_MainMenu[1].tooltip = "Connect to other computers over the internet.";
+		#else
+		PLAY_MainMenu[1].status = IT_TRANSTEXT2 | IT_CALL;
+		PLAY_MainMenu[1].tooltip = "Netplay is disabled in the web port.";
+		#endif
 	}
 
 	if (choice != -1)

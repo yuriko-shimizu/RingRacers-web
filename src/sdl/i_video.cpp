@@ -1341,13 +1341,19 @@ static SDL_bool Impl_CreateContext(void)
 #endif
 
 	// RHI always uses OpenGL 2.0 (for now)
-
 	if (!sdlglcontext)
 	{
 		SDL_GL_ResetAttributes();
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-		sdlglcontext = SDL_GL_CreateContext(window);
+		#ifdef __EMSCRIPTEN__
+			// emscripten is using gles, set that up
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);  // OpenGL ES 2.0
+		#else
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);  // OpenGL 2.1
+		#endif
+    	sdlglcontext = SDL_GL_CreateContext(window);
 	}
 	if (sdlglcontext == NULL)
 	{

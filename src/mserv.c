@@ -546,6 +546,23 @@ Get_rules (void)
 
 #endif/*MASTERSERVER*/
 
+#ifndef MASTERSERVER // the ifdefs are weird! just stubbing these so the js links
+void RegisterServer(void)
+{
+	// do nothing
+}
+
+void MasterClient_Ticker(void)
+{
+	// do nothing
+}
+
+void Get_rules (void)
+{
+	// do nothing
+}
+#endif
+
 void
 Update_parameters (void)
 {
@@ -588,6 +605,7 @@ void MasterServer_OnChange(void)
 void Advertise_OnChange(void);
 void Advertise_OnChange(void)
 {
+#ifdef MASTERSERVER
 	int different;
 
 	if (cv_advertise.value)
@@ -610,6 +628,7 @@ void Advertise_OnChange(void)
 	{
 		UnregisterServer();
 	}
+#endif
 
 #ifdef HAVE_DISCORDRPC
 	DRPC_UpdatePresence();

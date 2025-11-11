@@ -31,8 +31,14 @@ menuitem_t OPTIONS_VideoAdvanced[] =
 	{IT_STRING | IT_CVAR, "Enable Skyboxes", "Turning this off may improve performance, but reduces courses' background details.",
 		NULL, {.cvar = &cv_skybox}, 0, 0},
 
+	// this crashes the web port because we cant do threads
+	#ifndef __EMSCRIPTEN__
 	{IT_STRING | IT_CVAR, "Parallel Software", "Uses multiple CPU cores for the software renderer if available, for a FPS boost.",
 		NULL, {.cvar = &cv_parallelsoftware}, 0, 0},
+	#else
+	{IT_STRING | IT_CVAR, "Parallel Software", "Disabled in the web port.",
+		NULL, {NULL}, 0, 0},
+	#endif
 
 	{IT_STRING | IT_CVAR, "Extra Frame Skipping", "Skip 3D rendering frames while the menu is open.",
 		NULL, {.cvar = &cv_menuframeskip}, 0, 0},
@@ -62,8 +68,14 @@ menuitem_t OPTIONS_VideoAdvanced[] =
 	{IT_SPACE | IT_NOTHING, NULL, NULL,
 		NULL, {NULL}, 0, 0},
 
-	{IT_STRING | IT_CVAR, "Renderer", "If you don't know why you're changing this, leave it on Software!",
-		NULL, {.cvar = &cv_renderer}, 0, 0},
+	// not about to make legacy gl work with emscripten
+	#ifndef __EMSCRIPTEN__
+		{IT_STRING | IT_CVAR, "Renderer", "If you don't know why you're changing this, leave it on Software!",
+			NULL, {.cvar = &cv_renderer}, 0, 0},
+	#else
+		{IT_STRING | IT_CVAR, "Renderer", "Web port is software only!",
+		NULL, {NULL}, 0, 0},
+	#endif
 
 	{IT_HEADER, "Legacy GL Options...", "Watch people get confused anyway!!",
 		NULL, {NULL}, 0, 0},

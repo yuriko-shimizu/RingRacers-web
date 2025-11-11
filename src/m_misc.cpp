@@ -53,6 +53,10 @@
 #include "command.h" // cv_execversion
 
 #include "m_anigif.h"
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #ifdef SRB2_CONFIG_ENABLE_WEBM_MOVIES
 #include "m_avrecorder.h"
 #include "m_avrecorder.hpp"
@@ -786,6 +790,13 @@ void M_SaveConfig(const char *filename)
 			CONS_Alert(CONS_ERROR, M_GetText("Failed to move temp config file to real destination\n"));
 		}
 	}
+
+#ifdef __EMSCRIPTEN__
+	// sync file system! technically this syncs everything but meh. not doing much file io anyway.
+	EM_ASM({
+		FS.syncfs(false, function() {});
+	}, 0);
+#endif
 }
 
 // ==========================================================================

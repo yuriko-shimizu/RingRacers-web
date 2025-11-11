@@ -19,6 +19,8 @@
 #include <cstdlib>
 #elif defined (__APPLE__)
 #include <CommonCrypto/CommonRandom.h>
+#elif defined (__EMSCRIPTEN__) //stun is used ONCE to calculate a thing for new profiles.
+	#include "emscripten_csprng.h"
 #else
 #error "Need CSPRNG."
 #endif

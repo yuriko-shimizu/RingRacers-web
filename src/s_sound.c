@@ -873,6 +873,9 @@ notinlevel:
 
 void S_UpdateVoicePositionalProperties(void)
 {
+#ifdef __EMSCRIPTEN__ //no voice support! return.
+	return;
+#endif
 	int i;
 
 	if (gamestate != GS_LEVEL)
@@ -2835,8 +2838,12 @@ void VoiceSelfDeafen_OnChange(void);
 void weaponPrefChange(INT32 ssplayer);
 void VoiceSelfDeafen_OnChange(void)
 {
+#ifdef __EMSCRIPTEN__
+	return;  // Voice chat not supported in web build
+#else
 	if (M_CheckParm("-novoice") || M_CheckParm("-noaudio"))
 		return;
+#endif
 
 	g_voice_disabled = cv_voice_selfdeafen.value;
 
@@ -2911,6 +2918,9 @@ boolean S_IsPlayerVoiceActive(INT32 playernum)
 
 void S_ResetVoiceQueue(INT32 playernum)
 {
+#ifdef __EMSCRIPTEN__ //no voice support! return.
+	return;
+#endif
 	if (dedicated)
 	{
 		return;

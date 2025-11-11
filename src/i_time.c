@@ -16,6 +16,10 @@
 
 #include <math.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include "command.h"
 #include "doomtype.h"
 #include "d_netcmd.h"
@@ -79,9 +83,15 @@ void I_UpdateTime(void)
 
 	// get real tics
 	ticratescaled = (double)TICRATE * FIXED_TO_FLOAT(I_GetTimeScale());
-
+	// on emscripten this function is just really laggy for no reason. use emscripten_get_now instead of going through sdl
+	#ifdef __EMSCRIPTEN__
+	enterprecise = (precise_t)(emscripten_get_now() * 1000); // convert to microseconds, stops us from losing fractions in the cast
+	elapsedseconds = (double)((enterprecise - oldenterprecise)) / 1000000; //divide into seconds like the function expects
+	#else
 	enterprecise = I_GetPreciseTime();
 	elapsedseconds = (double)(enterprecise - oldenterprecise) / I_GetPrecisePrecision();
+	#endif
+	
 	tictimer += elapsedseconds;
 	while (tictimer > 1.0/ticratescaled)
 	{

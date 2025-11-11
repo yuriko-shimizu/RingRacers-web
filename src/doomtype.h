@@ -105,8 +105,10 @@ char *nongnu_strcasestr(const char *in, const char *what);
 #endif
 
 #ifndef HAVE_DOSSTR_FUNCS
+#ifndef __EMSCRIPTEN__  // oh my god just compile already
 int strupr(char *n); // from dosstr.c
 int strlwr(char *n); // from dosstr.c
+#endif
 #endif
 
 #include <stddef.h> // for size_t

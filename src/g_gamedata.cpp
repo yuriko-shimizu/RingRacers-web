@@ -26,6 +26,10 @@
 #include "r_skins.h"
 #include "z_zone.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 namespace fs = std::filesystem;
 
 #define GD_VERSION_MAJOR (0xBA5ED321)
@@ -325,6 +329,21 @@ void G_SaveGameData(void)
 
 	// Also save profiles here.
 	PR_SaveProfiles();
+
+	#ifdef __EMSCRIPTEN__
+	#include <emscripten.h>
+	// sync to idbfs! doing it this way instead of the C call because this lets me do 
+	// console.log so it doesnt come out as an error like cons_printf does
+	emscripten_run_script(
+		"FS.syncfs(false, function (err) {"
+		"  if (err) console.error('idbfs sync error:', err);"
+		"  else console.log('synced to idbfs');"
+		"});"
+	);
+	#endif
+
+
+
 
 	#ifdef DEVELOP
 		CONS_Alert(CONS_NOTICE, M_GetText("Gamedata saved.\n"));

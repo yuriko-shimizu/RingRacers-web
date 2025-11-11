@@ -5,7 +5,6 @@ target_sources(SRB2SDL2 PRIVATE
 	ogl_sdl.c
 	rhi_gl2_platform.cpp
 	rhi_gl2_platform.hpp
-	i_threads.c
 	i_net.c
 	i_system.cpp
 	i_main.cpp
@@ -58,10 +57,12 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES Darwin)
 	)
 endif()
 
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten") #emscripten doesnt need this bit
 target_link_libraries(SRB2SDL2
 	PRIVATE
 	$<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
 )
+endif()
 
 if("${CMAKE_SYSTEM_NAME}" MATCHES Linux)
 	target_link_libraries(SRB2SDL2 PRIVATE m rt)

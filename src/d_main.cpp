@@ -18,6 +18,10 @@
 
 #include <tracy/tracy/Tracy.hpp>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -73,6 +77,10 @@
 #include "g_input.h" // tutorial mode control scheming
 #include "m_perfstats.h"
 #include "core/memory.h"
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #include "monocypher/monocypher.h"
 #include "stun.h"
@@ -868,6 +876,10 @@ void D_SRB2Loop(void)
 
 	// Pushing of + parameters is now done back in D_SRB2Main, not here.
 
+	#ifdef __EMSCRIPTEN__
+		emscripten_sleep(0);
+	#endif
+
 	I_UpdateTime();
 	oldentertics = I_GetTime();
 
@@ -876,7 +888,17 @@ void D_SRB2Loop(void)
 
 	// make sure to do a d_display to init mode _before_ load a level
 	SCR_SetMode(); // change video mode
+	// theres some sleeps in here just to give the browser the thread for a bit.
+	// without these, the broswer says the site is unresponsive and tries to kill it
+	#ifdef __EMSCRIPTEN__
+		emscripten_sleep(0);
+	#endif
+
 	SCR_Recalc();
+
+	#ifdef __EMSCRIPTEN__
+		emscripten_sleep(0);
+	#endif
 
 	chosenrendermode = render_none;
 
@@ -1082,7 +1104,9 @@ void D_SRB2Loop(void)
 
 		// consoleplayer -> displayplayers (hear sounds from viewpoint)
 		S_UpdateSounds(); // move positional sounds
+#ifndef __EMSCRIPTEN__ // no voice support!
 		NetVoiceUpdate(); // update voice recording whenever possible
+#endif
 		if (realtics > 0 || singletics)
 		{
 			S_UpdateClosedCaptions();
@@ -1099,7 +1123,9 @@ void D_SRB2Loop(void)
 #endif
 
 		Music_Tick();
+#ifndef __EMSCRIPTEN__ // no voice support! but then we dont support online anyway...
 		S_UpdateVoicePositionalProperties();
+#endif
 
 		// Fully completed frame made.
 		finishprecise = I_GetPreciseTime();
@@ -1199,6 +1225,10 @@ void D_SRB2Loop(void)
 		finishprecise = I_GetPreciseTime();
 		deltasecs = (double)((INT64)(finishprecise - enterprecise)) / I_GetPrecisePrecision();
 		deltatics = deltasecs * NEWTICRATE;
+
+#ifdef __EMSCRIPTEN__
+		emscripten_sleep(0);
+#endif
 	}
 }
 
@@ -1215,7 +1245,9 @@ void D_ClearState(void)
 
 	// okay, stop now
 	// (otherwise the game still thinks we're playing!)
+#ifndef __EMSCRIPTEN__
 	CURLAbortFile();
+#endif
 	SV_StopServer();
 	SV_ResetServer();
 	serverlistultimatecount = 0;
@@ -1787,7 +1819,6 @@ void D_SRB2Main(void)
 	//---------------------------------------------------- READY SCREEN
 	// we need to check for dedicated before initialization of some subsystems
 
-	CONS_Printf("I_StartupGraphics()...\n");
 	I_StartupGraphics();
 	I_StartDisplayUpdate();
 
@@ -1883,9 +1914,17 @@ void D_SRB2Main(void)
 	R_InitTextureData(); // seperated out from below because it takes ages by itself
 	CON_SetLoadingProgress(LOADED_INITTEXTUREDATA);
 
+#ifdef __EMSCRIPTEN__  // same as earlier. sleep so the browser doesnt think we've hanged
+	emscripten_sleep(0);
+#endif
+
 	CONS_Printf("R_InitSprites()...\n");
 	R_InitSprites(); // ditto
 	CON_SetLoadingProgress(LOADED_INITSPRITES);
+
+#ifdef __EMSCRIPTEN__ 
+	emscripten_sleep(0);
+#endif
 
 	CONS_Printf("R_InitSkins()...\n");
 	R_InitSkins(); // ditto

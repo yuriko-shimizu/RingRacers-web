@@ -236,12 +236,18 @@ void M_MPOptSelectInit(INT32 choice)
 	const UINT32 forbidden = GTR_FORBIDMP;
 
 #ifndef TESTERS
+#ifndef __EMSCRIPTEN__
 	if (choice != -1 && !M_SecretUnlocked(SECRET_ONLINE, true))
 	{
 		M_StartMessage("No Way? No Way!", "Online play is ""\x8B""not yet unlocked""\x80"".\n\nYou'll want experience in ""\x8B""Grand Prix""\x80""\nbefore even thinking about facing\nopponents from across the world.\n", NULL, MM_NOTHING, NULL, NULL);
 		S_StartSound(NULL, sfx_s3k36);
 		return;
 	}
+	#else
+		M_StartMessage("No Way? No Way!", "Online play is not supported!", NULL, MM_NOTHING, NULL, NULL);
+		S_StartSound(NULL, sfx_s3k36);
+		return;
+#endif
 #endif
 
 	mpmenu.modechoice = 0;

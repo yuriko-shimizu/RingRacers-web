@@ -30,6 +30,9 @@
 #include "r_skins.h"
 #include "monocypher/monocypher.h"
 #include "stun.h"
+#ifdef __EMSCRIPTEN__ // we use csprng ONCE when creating a new profile. woo.
+	#include "emscripten_csprng.h"
+#endif
 #include "k_color.h"
 #include "command.h"
 

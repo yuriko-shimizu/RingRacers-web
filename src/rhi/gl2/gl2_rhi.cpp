@@ -17,7 +17,15 @@
 #include <utility>
 
 #include <fmt/format.h>
+#ifdef __EMSCRIPTEN__
+#include <glad/gles2.h>
+// WebGL depth-stencil extension constants not in GLAD GLES2 headers
+#ifndef GL_DEPTH_STENCIL_OES
+#define GL_DEPTH_STENCIL_OES 0x84F9
+#endif
+#else
 #include <glad/gl.h>
+#endif
 #include <glm/gtc/type_ptr.hpp>
 
 #include "../../core/vector.hpp"
@@ -52,13 +60,29 @@ constexpr GLenum map_pixel_format(rhi::PixelFormat format)
 	switch (format)
 	{
 	case rhi::PixelFormat::kR8:
+#ifdef __EMSCRIPTEN__
+		return GL_LUMINANCE;  // OpenGL ES 2.0 doesn't have sized formats
+#else
 		return GL_LUMINANCE8;
+#endif
 	case rhi::PixelFormat::kRG8:
+#ifdef __EMSCRIPTEN__
+		return GL_LUMINANCE_ALPHA;  // OpenGL ES 2.0 doesn't have sized formats
+#else
 		return GL_LUMINANCE8_ALPHA8;
+#endif
 	case rhi::PixelFormat::kRGB8:
+#ifdef __EMSCRIPTEN__
+		return GL_RGB;   // WebGL ES 2.0 doesn't support sized internal formats
+#else
 		return GL_RGB8;
+#endif
 	case rhi::PixelFormat::kRGBA8:
+#ifdef __EMSCRIPTEN__
+		return GL_RGBA;  // WebGL ES 2.0 doesn't support sized internal formats
+#else
 		return GL_RGBA8;
+#endif
 	case rhi::PixelFormat::kDepth16:
 		return GL_DEPTH_COMPONENT16;
 	case rhi::PixelFormat::kStencil8:
@@ -151,13 +175,29 @@ constexpr GLenum map_internal_texture_format(rhi::TextureFormat format)
 	switch (format)
 	{
 	case rhi::TextureFormat::kRGBA:
+#ifdef __EMSCRIPTEN__
+		return GL_RGBA;  // WebGL 1 doesn't support sized internal formats
+#else
 		return GL_RGBA8;
+#endif
 	case rhi::TextureFormat::kRGB:
+#ifdef __EMSCRIPTEN__
+		return GL_RGB;   // WebGL 1 doesn't support sized internal formats
+#else
 		return GL_RGB8;
+#endif
 	case rhi::TextureFormat::kLuminance:
+#ifdef __EMSCRIPTEN__
+		return GL_LUMINANCE;  // OpenGL ES 2.0 doesn't have sized formats
+#else
 		return GL_LUMINANCE8;
+#endif
 	case rhi::TextureFormat::kLuminanceAlpha:
+#ifdef __EMSCRIPTEN__
+		return GL_LUMINANCE_ALPHA;  // OpenGL ES 2.0 doesn't have sized formats
+#else
 		return GL_LUMINANCE8_ALPHA8;
+#endif
 	default:
 		return GL_ZERO;
 	}
@@ -604,8 +644,13 @@ Gl2Platform::~Gl2Platform() = default;
 
 Gl2Rhi::Gl2Rhi(std::unique_ptr<Gl2Platform>&& platform, GlLoadFunc load_func) : platform_(std::move(platform))
 {
+#ifdef __EMSCRIPTEN__
+	gl_ = std::make_unique<GladGLES2Context>();
+	gladLoadGLES2Context(gl_.get(), load_func);
+#else
 	gl_ = std::make_unique<GladGLContext>();
 	gladLoadGLContext(gl_.get(), load_func);
+#endif
 }
 
 Gl2Rhi::~Gl2Rhi() = default;
@@ -614,7 +659,13 @@ rhi::Handle<rhi::Texture> Gl2Rhi::create_texture(const rhi::TextureDesc& desc)
 {
 	GLenum internal_format = map_internal_texture_format(desc.format);
 	SRB2_ASSERT(internal_format != GL_ZERO);
+#ifdef __EMSCRIPTEN__
+	// WebGL requires format to match internal format for unsized formats
+	GLenum format = map_texture_format(desc.format);
+#else
+	// Desktop OpenGL can use RGBA for upload regardless of internal format
 	GLenum format = GL_RGBA;
+#endif
 
 	GLuint name = 0;
 	gl_->GenTextures(1, &name);
@@ -810,7 +861,12 @@ rhi::Handle<rhi::Renderbuffer> Gl2Rhi::create_renderbuffer(const rhi::Renderbuff
 
 	// For reference, D32FS8 at 4k requires 64 MiB of linear memory. D24S8 is 32 MiB.
 
+#ifdef __EMSCRIPTEN__
+	// WebGL/OpenGL ES 2.0 basic depth format
+	gl_->RenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_STENCIL_OES, desc.width, desc.height);
+#else
 	gl_->RenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, desc.width, desc.height);
+#endif
 	GL_ASSERT;
 
 	Gl2Renderbuffer rb;
@@ -844,8 +900,13 @@ rhi::Handle<rhi::Program> Gl2Rhi::create_program(const ProgramDesc& desc)
 	srb2::Vector<const char*> frag_sources;
 	ShaderLoadContext vert_ctx;
 	ShaderLoadContext frag_ctx;
-	vert_ctx.set_version("120");
-	frag_ctx.set_version("120");
+#ifdef __EMSCRIPTEN__
+	vert_ctx.set_version("100");  // OpenGL ES 2.0 / WebGL 1.0
+	frag_ctx.set_version("100");  // OpenGL ES 2.0 / WebGL 1.0
+#else
+	vert_ctx.set_version("120");  // Desktop OpenGL 2.1
+	frag_ctx.set_version("120");  // Desktop OpenGL 2.1
+#endif
 	for (auto def : desc.defines)
 	{
 		vert_ctx.define(def);
@@ -999,7 +1060,11 @@ void Gl2Rhi::apply_default_framebuffer(bool clear)
 	if (clear)
 	{
 		gl_->ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+#ifdef __EMSCRIPTEN__
+		gl_->ClearDepthf(1.0f);
+#else
 		gl_->ClearDepth(1.0f);
+#endif
 		gl_->ClearStencil(0);
 		gl_->Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		GL_ASSERT;
@@ -1054,7 +1119,11 @@ void Gl2Rhi::apply_framebuffer(const RenderPassBeginInfo& info, bool allow_clear
 
 	if (info.depth_load_op == rhi::AttachmentLoadOp::kClear)
 	{
-		gl_->ClearDepth(1.f);
+#ifdef __EMSCRIPTEN__
+			gl_->ClearDepthf(1.f);
+#else
+			gl_->ClearDepth(1.f);
+#endif
 		clear_bits |= GL_DEPTH_BUFFER_BIT;
 	}
 	if (info.stencil_load_op == rhi::AttachmentLoadOp::kClear)
@@ -1504,12 +1573,16 @@ void Gl2Rhi::read_pixels(const Rect& rect, PixelFormat format, tcb::span<std::by
 	SRB2_ASSERT(rect.x + rect.w <= src_dim.w);
 	SRB2_ASSERT(rect.y + rect.h <= src_dim.h);
 
+#ifndef __EMSCRIPTEN__
+	// OpenGL ES doesn't support glReadBuffer or GL_BACK_LEFT
 	GLenum read_buffer = is_back ? GL_BACK_LEFT : GL_COLOR_ATTACHMENT0;
 	gl_->ReadBuffer(read_buffer);
 	GL_ASSERT;
+#else
 
 	gl_->ReadPixels(rect.x, rect.y, rect.w, rect.h, layout, type, out.data());
 	GL_ASSERT;
+#endif
 }
 
 void Gl2Rhi::set_stencil_reference(CullMode face, uint8_t reference)
@@ -1667,9 +1740,12 @@ void Gl2Rhi::copy_framebuffer_to_texture(
 	SRB2_ASSERT(src_region.x + src_region.w <= src_dim.w);
 	SRB2_ASSERT(src_region.y + src_region.h <= src_dim.h);
 
+#ifndef __EMSCRIPTEN__
+	// OpenGL ES doesn't support glReadBuffer or GL_BACK_LEFT
 	GLenum read_buffer = is_back ? GL_BACK_LEFT : GL_COLOR_ATTACHMENT0;
 	gl_->ReadBuffer(read_buffer);
 	GL_ASSERT;
+#endif
 
 	gl_->BindTexture(GL_TEXTURE_2D, tex.texture);
 	GL_ASSERT;

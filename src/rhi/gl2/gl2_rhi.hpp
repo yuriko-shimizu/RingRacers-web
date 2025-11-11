@@ -57,7 +57,11 @@ struct std::hash<srb2::rhi::Gl2FramebufferKey>
 	}
 };
 
+#ifdef __EMSCRIPTEN__
+struct GladGLES2Context;
+#else
 struct GladGLContext;
+#endif
 
 namespace srb2::rhi
 {
@@ -112,7 +116,11 @@ class Gl2Rhi final : public Rhi
 {
 	std::unique_ptr<Gl2Platform> platform_;
 
+#ifdef __EMSCRIPTEN__
+	std::unique_ptr<GladGLES2Context> gl_;
+#else
 	std::unique_ptr<GladGLContext> gl_;
+#endif
 
 	Slab<Gl2Texture> texture_slab_;
 	Slab<Gl2Buffer> buffer_slab_;

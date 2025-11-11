@@ -82,7 +82,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include "SDL_cpuinfo.h"
 #define HAVE_SDLCPUINFO
 
-#if defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))
+#if (defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))) && !defined(__EMSCRIPTEN__)
 #if defined (__linux__)
 #include <sys/vfs.h>
 #else
@@ -100,9 +100,11 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 
 #if defined (__linux__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))
 #ifndef NOTERMIOS
+#ifndef __EMSCRIPTEN__
 #include <termios.h>
 #include <sys/ioctl.h> // ioctl
 #define HAVE_TERMIOS
+#endif
 #endif
 #endif
 
@@ -141,7 +143,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <errno.h>
 #endif
 
-#if (defined(__linux__) && defined(__USE_GNU)) || (defined (__unix__) || defined (UNIXCOMMON)) && !defined(__linux__) || defined(__APPLE__)
+#if ((defined(__linux__) && defined(__USE_GNU)) || (defined (__unix__) || defined (UNIXCOMMON)) && !defined(__linux__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
 #include <execinfo.h>
 #include <time.h>
 #define UNIXBACKTRACE
@@ -1818,8 +1820,10 @@ INT32 I_StartupSystem(void)
 #ifdef NEWSIGNALHANDLER
 	// This is useful when debugging. It lets GDB attach to
 	// the correct process easily.
+#ifndef __EMSCRIPTEN__ // we're not using threads. no forking.
 	if (!M_CheckParm("-nofork"))
 		I_Fork();
+#endif
 #endif
 #ifdef HAVE_THREADS
 	I_start_threads();
@@ -2148,7 +2152,11 @@ void I_ShutdownSystem(void)
 
 void I_GetDiskFreeSpace(INT64 *freespace)
 {
-#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#ifdef __EMSCRIPTEN__
+	// we dont really have "disk space" in emscripten, return A Lot(tm)
+	*freespace = INT32_MAX;
+	return;
+#elif defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #if defined (SOLARIS) || defined (__HAIKU__)
 	*freespace = INT32_MAX;
 	return;

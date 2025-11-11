@@ -138,6 +138,23 @@
 				"CMAKE_OSX_DEPLOYMENT_TARGET": "10.15"
 			}
 		},
+		{
+			"name": "__emscripten",
+			"hidden": true,
+			"environment": {
+				"EM_CACHE": "${sourceDir}/build/emscripten-cache"
+			},
+			"cacheVariables": {
+				"CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+				"CMAKE_SYSTEM_NAME": "Emscripten",
+				"SRB2_CONFIG_ENABLE_DISCORDRPC": "OFF",
+				"SRB2_CONFIG_ENABLE_WEBM_MOVIES": "OFF",
+				"SRB2_CONFIG_HWRENDER": "ON",
+				"SRB2_CONFIG_STATIC_STDLIB": "OFF",
+				"CMAKE_C_FLAGS": "-sUSE_SDL=2 -sNO_DISABLE_EXCEPTION_CATCHING",
+				"CMAKE_CXX_FLAGS": "-stdlib=libc++ -sUSE_SDL=2 -sNO_DISABLE_EXCEPTION_CATCHING"
+			}
+		},
 
 		{
 			"name": "ninja-debug",
@@ -268,7 +285,26 @@
 			"name": "ninja-arm64_osx_vcpkg-release",
 			"hidden": false,
 			"binaryDir": "build/${presetName}",
-			"inherits": [ "__release", "__ninja", "__vcpkg-toolchain", "__osx_arm64" ]
+			"inherits": ["__release", "__ninja", "__vcpkg-toolchain", "__osx_arm64"]
+		},
+
+		{
+			"name": "ninja-emscripten-debug",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__debug", "__ninja", "__emscripten"]
+		},
+		{
+			"name": "ninja-emscripten-develop",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__develop", "__ninja", "__emscripten"]
+		},
+		{
+			"name": "ninja-emscripten-release",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__release", "__ninja", "__emscripten"]
 		}
 	],
 
@@ -348,6 +384,18 @@
 		{
 			"name": "ninja-arm64_osx_vcpkg-release",
 			"configurePreset": "ninja-arm64_osx_vcpkg-release"
+		},
+		{
+			"name": "ninja-emscripten-debug",
+			"configurePreset": "ninja-emscripten-debug"
+		},
+		{
+			"name": "ninja-emscripten-develop",
+			"configurePreset": "ninja-emscripten-develop"
+		},
+		{
+			"name": "ninja-emscripten-release",
+			"configurePreset": "ninja-emscripten-release"
 		}
 	]
 }
