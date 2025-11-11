@@ -66,6 +66,13 @@ After all prerequisites are set-up, configure and build using the following comm
     cmake --preset ninja-x86_mingw_static_vcpkg-develop
     cmake --build --preset ninja-x86_mingw_static_vcpkg-develop
 
+### Emscripten
+
+For Emscripten specifically, you will need to install the [emsdk](https://emscripten.org/docs/getting_started/downloads.html) and ensure it's added to your path. From there, the process should be the same as compiling normally:
+
+    cmake --preset ninja-emscripten-release
+    cmake --build --preset ninja-emscripten-release
+
 ## Contributing
 
 We welcome external contributions from the community. If you are planning on making a large feature you intend to contribute to the project, please consider reaching out to us in the Kart Krew Dev public Discord server so we can coordinate with you.
